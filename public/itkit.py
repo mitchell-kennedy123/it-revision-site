@@ -364,9 +364,9 @@ export default { render };
 _LIVEEQ_CSS = _CSS_COMMON + """
 .liveeq { padding: 6px 4px 2px; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
 .liveeq .line { padding: 2px 0; }
-.liveeq .ledrag { cursor: ew-resize; border-bottom: 2px dashed currentColor; padding: 0 1px; border-radius: 3px;
+.liveeq .ledrag { cursor: ew-resize; background: rgba(0,114,178,.10); box-shadow: inset 0 0 0 1px rgba(0,114,178,.35); padding: 0 2px; border-radius: 3px;
   touch-action: none; outline: none; transition: background .12s; }
-.liveeq .ledrag:hover, .liveeq .ledrag:focus, .liveeq .ledrag.active { background: rgba(0,114,178,.12); }
+.liveeq .ledrag:hover, .liveeq .ledrag:focus, .liveeq .ledrag.active { background: rgba(0,114,178,.22); }
 .liveeq.dragging, .liveeq.dragging * { cursor: ew-resize !important; }
 .liveeq .leout { background: rgba(31,41,51,.06); border-radius: 4px; padding: 1px 3px; }
 .liveeq .hint { font-size: 12px; color: #8A95A3; margin-top: 2px; text-align: center; }
@@ -412,7 +412,7 @@ if anywidget is not None:
         live = T.Bool(False).tag(sync=True)
         drag_color = T.Unicode("#0072B2").tag(sync=True)
         out_color = T.Unicode("#1F2933").tag(sync=True)
-        hint = T.Unicode("drag the dashed numbers left/right (or focus + arrow keys)").tag(sync=True)
+        hint = T.Unicode("drag the blue-boxed numbers left/right (or focus + arrow keys)").tag(sync=True)
 
         def __init__(self, tex, vars, terms=None, bars=None, **kw):
             terms = {k: (v if isinstance(v, dict) else {"expr": v}) for k, v in (terms or {}).items()}
@@ -1230,12 +1230,17 @@ def code_tree_svg(codes: dict, depth: int | None = None, colors: dict | None = N
                 x1, y1 = pos[(d + 1, 2 * k + b)]
                 inside = (d + 1, 2 * k + b) in used and (d, k) in used
                 parts.append(f'<line x1="{x0}" y1="{y0}" x2="{x1}" y2="{y1}" stroke="{"#E3E7EC" if inside else "#9AA5B1"}" stroke-width="1.4"/>')
-                parts.append(f'<text x="{(x0 + x1) / 2 + (-8 if b == 0 else 8)}" y="{(y0 + y1) / 2}" font-size="11" fill="#8A95A3" text-anchor="middle">{b}</text>')
+                if width / 2 ** (d + 1) >= 22:   # skip the 0/1 tags when the tree is too dense for them
+                    parts.append(f'<text x="{(x0 + x1) / 2 + (-8 if b == 0 else 8)}" y="{(y0 + y1) / 2}" font-size="11" fill="#8A95A3" text-anchor="middle">{b}</text>')
     for (d, k), (x, y) in pos.items():
         if (d, k) in owner:
             s = owner[(d, k)]
             col = colors.get(s, "#E69F00")
-            parts.append(f'<circle cx="{x}" cy="{y}" r="13" fill="{col}"/><text x="{x}" y="{y + 4}" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">{_html.escape(str(s))}</text>')
+            sp = width / 2 ** d                       # horizontal room per node at this depth
+            lab = str(s)
+            r = max(6.0, min(max(13.0, 6 + 4.5 * len(lab)), sp / 2 - 1.5))
+            fs = max(7.0, min(12.0, 2 * r / (0.62 * len(lab) + 0.5)))
+            parts.append(f'<circle cx="{x}" cy="{y}" r="{r:.1f}" fill="{col}"/><text x="{x}" y="{y + fs / 3:.1f}" font-size="{fs:.1f}" font-weight="700" fill="#fff" text-anchor="middle">{_html.escape(lab)}</text>')
         elif (d, k) in used:
             parts.append(f'<circle cx="{x}" cy="{y}" r="4" fill="#E3E7EC"/>')
         else:

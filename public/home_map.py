@@ -194,7 +194,7 @@ def _(K):
     bands = [
         dict(label="Compression", color="#E69F00", c0=1, c1=2, r0=0, r1=1),
         dict(label="Communication", color="#56B4E9", c0=0, c1=1, r0=4, r1=6),
-        dict(label="Learning", color="#6E7FA3", c0=3, c1=4, r0=4, r1=6),
+        dict(label="Learning", color="#6E7FA3", c0=3, c1=4, r0=4, r1=6, pos="br"),
     ]
     chains = [
         dict(id="compress", label="Compression: H → Kraft → Huffman", ids=["H", "kraft", "huff"],
@@ -340,15 +340,15 @@ def _(bands, chains, edges, mo, nodes):
         const cs = ch ? new Set(ch.ids) : null, ce = ch ? chainEdges(ch) : null;
         const nb = new Set(sel ? [sel] : []); edges.forEach(e => { if (e.s === sel) nb.add(e.t); if (e.t === sel) nb.add(e.s); });
         const stage = document.createElement('div'); stage.className = 'stage';
-        const mx = 80, cw = (W - 2 * mx) / 4, rh = 96, my = 44;
+        const mx = 80, cw = (W - 2 * mx) / 4, rh = 106, my = 56;
         stage.style.height = (6 * rh + 2 * my) + 'px';
         const X = c => mx + c * cw, Y = r => my + r * rh;
         bands.forEach(b => {
           const d = document.createElement('div'); d.className = 'band';
           d.style.left = (X(b.c0) - 78) + 'px'; d.style.top = (Y(b.r0) - 36) + 'px';
-          d.style.width = (X(b.c1) - X(b.c0) + 156) + 'px'; d.style.height = (Y(b.r1) - Y(b.r0) + 72) + 'px';
+          d.style.width = (X(b.c1) - X(b.c0) + 156) + 'px'; d.style.height = (Y(b.r1) - Y(b.r0) + 36 + 48) + 'px';
           d.style.background = b.color + '14'; d.style.borderColor = b.color + '55';
-          d.innerHTML = `<span style="color:${b.color}">${esc(b.label)}</span>`; stage.appendChild(d);
+          d.innerHTML = `<span class="${b.pos === 'br' ? 'r' : ''}" style="color:${b.color}">${esc(b.label)}</span>`; stage.appendChild(d);
         });
         const svg = document.createElementNS(NS, 'svg'); svg.setAttribute('width', W); svg.setAttribute('height', 6 * rh + 2 * my); svg.className.baseVal = 'wires';
         svg.innerHTML = '<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7B8794"/></marker><marker id="ahs" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1F2933"/></marker></defs>';
@@ -374,6 +374,7 @@ def _(bands, chains, edges, mo, nodes):
           lb.innerHTML = tex(e.label, false);
           const horiz = Math.abs(dy) < 4;
           lb.style.left = ((ax + bx) / 2) + 'px'; lb.style.top = ((ay + by) / 2 + (horiz ? -20 : 0)) + 'px';
+          lb._seg = [ax + dx / L * ta, ay + dy / L * ta, bx - dx / L * tb, by - dy / L * tb]; lb._on = !!on;
           labs.appendChild(lb);
         });
         nodes.forEach(n => {
@@ -381,7 +382,51 @@ def _(bands, chains, edges, mo, nodes):
           d.style.left = X(n.c) + 'px'; d.style.top = Y(n.r) + 'px'; stage.appendChild(d);
         });
         stage.appendChild(labs);
+        stage._place = () => placeLabels(stage, labs);
         return stage;
+      }
+
+      // Greedy label placement: try spots along each edge (and beside it) and keep the one that
+      // collides least with nodes, band titles, already-placed labels and other edges.
+      function placeLabels(stage, labs) {
+        const sr = stage.getBoundingClientRect();
+        const rel = e => { const r = e.getBoundingClientRect(); return { l: r.left - sr.left, t: r.top - sr.top, r: r.right - sr.left, b: r.bottom - sr.top }; };
+        const ov = (a, b) => Math.max(0, Math.min(a.r, b.r) - Math.max(a.l, b.l)) * Math.max(0, Math.min(a.b, b.b) - Math.max(a.t, b.t));
+        const boxes = [...stage.querySelectorAll('.nd')].map(rel).map(b => ({ l: b.l - 5, t: b.t - 5, r: b.r + 5, b: b.b + 5 }));
+        const titles = [...stage.querySelectorAll('.band span')].map(rel);
+        const items = [...labs.children];
+        const segs = items.map(l => l._seg);
+        const order = items.map((l, i) => i).sort((i, j) => (items[j]._on ? 1 : 0) - (items[i]._on ? 1 : 0));
+        const placed = new Array(items.length).fill(null);
+        const H = parseFloat(stage.style.height), Wd = sr.width;
+        order.concat(order).forEach(i => {
+          const lb = items[i], sg = segs[i];
+          const w = lb.offsetWidth + 4, h = lb.offsetHeight + 2;
+          const dx = sg[2] - sg[0], dy = sg[3] - sg[1], L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
+          let best = null;
+          for (const t of [0.5, 0.42, 0.58, 0.34, 0.66, 0.26, 0.74, 0.18, 0.82]) {
+            for (const off of [0, 15, -15, 27, -27, 38, -38, 50, -50, 62, -62]) {
+              const cx = sg[0] + dx * t + nx * off, cy = sg[1] + dy * t + ny * off;
+              const r = { l: cx - w / 2, r: cx + w / 2, t: cy - h / 2, b: cy + h / 2 };
+              let c = Math.abs(t - 0.5) * 30 + Math.abs(off) * 0.6;
+              boxes.forEach(b => { c += ov(r, b) * 40; });
+              titles.forEach(b => { c += ov(r, b) * 40; });
+              placed.forEach((b, k) => { if (b && k !== i) c += ov(r, b) * 40; });
+              if (r.l < 0 || r.t < 0 || r.r > Wd || r.b > H) c += 5000;
+              segs.forEach((s2, k) => {
+                if (k === i) return;
+                const len = Math.hypot(s2[2] - s2[0], s2[3] - s2[1]);
+                for (let u = 0; u <= len; u += 4) {
+                  const x = s2[0] + (s2[2] - s2[0]) * u / len, y = s2[1] + (s2[3] - s2[1]) * u / len;
+                  if (x > r.l && x < r.r && y > r.t && y < r.b) c += 6;
+                }
+              });
+              if (!best || c < best.c) best = { c, cx, cy, r };
+            }
+          }
+          lb.style.left = best.cx + 'px'; lb.style.top = best.cy + 'px';
+          placed[i] = best.r;
+        });
       }
 
       function stacked() {
@@ -411,7 +456,9 @@ def _(bands, chains, edges, mo, nodes):
         root.innerHTML = '';
         root.appendChild(bar());
         const isWide = W >= WIDE;
-        root.appendChild(isWide ? wide() : stacked());
+        const body = isWide ? wide() : stacked();
+        root.appendChild(body);
+        if (body._place) { body._place(); l2.addEventListener('load', () => body._place()); setTimeout(() => body._place(), 600); }
         const ch = chains.find(c => c.id === chain);
         if (ch) root.appendChild(chainPanel(ch));
         else if (isWide) {
@@ -441,7 +488,8 @@ def _(bands, chains, edges, mo, nodes):
     .hm .stage { position: relative; width: 100%; border: 1px solid #EEF1F4; border-radius: 12px; background: #fff; overflow: hidden; }
     .hm .wires { position: absolute; left: 0; top: 0; }
     .hm .band { position: absolute; border: 1px dashed; border-radius: 16px; }
-    .hm .band span { position: absolute; left: 12px; top: 6px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    .hm .band span { position: absolute; left: 12px; bottom: 6px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    .hm .band span.r { left: auto; right: 12px; }
     .hm .nd { position: absolute; transform: translate(-50%, -50%); border: 2.5px solid; border-radius: 999px; padding: 6px 14px; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; outline: none; z-index: 2; }
     .hm .nd:hover, .hm .nd:focus-visible { box-shadow: 0 1px 6px rgba(0,0,0,.25); }
     .hm .nd.dim { opacity: .4; }
