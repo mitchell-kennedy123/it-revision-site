@@ -116,7 +116,7 @@ def _(K, T, mo):
 
 
 @app.cell
-def _(C2, COL, K, PRESETS, TAB_TERMS, TAB_TEX, mo, tab_vars):
+def _(C2, COL, K, PRESETS, T, TAB_TERMS, TAB_TEX, mo, tab_vars):
     eq_tab = mo.ui.anywidget(K.LiveEq(
         [TAB_TEX,
          r"H(Y\mid X{=}x_1)=\out{hr1}\qquad H(Y\mid X{=}x_2)=\out{hr2}",
@@ -128,12 +128,12 @@ def _(C2, COL, K, PRESETS, TAB_TERMS, TAB_TEX, mo, tab_vars):
          "agree": dict(expr="abs(s1-hxy)<1e-9")},
         bars=[dict(label="$H(X,Y)$", segs=[dict(term="hx", color=COL, label="H(X)"), dict(term="hyx", color=C2, label="H(Y|X)")])],
         bar_max=2.6, presets=PRESETS))
-    mo.vstack([eq_tab, K.notice("$H(Y\\mid X)$ is the $p(x)$-weighted average of the row entropies, and it is $0$ exactly when every row has a single nonzero cell ($Y$ is a function of $X$). The chain rule $H(X)+H(Y\\mid X)$ always matches the cell sum.")], gap=0.4)
+    mo.vstack([K.demo(T, "Chain rule on a joint table", "Edit the joint table $p(x,y)$: the bar splits $H(X,Y)$ into $H(X)$ plus the $p(x)$-weighted row entropies $H(Y\\mid X)$."), eq_tab, K.notice("$H(Y\\mid X)$ is the $p(x)$-weighted average of the row entropies, and it is $0$ exactly when every row has a single nonzero cell ($Y$ is a function of $X$). The chain rule $H(X)+H(Y\\mid X)$ always matches the cell sum.")], gap=0.4)
     return (eq_tab,)
 
 
 @app.cell
-def _(C2, C3, COL, K, PRESETS, TAB_TERMS, TAB_TEX, mo, tab_vars):
+def _(C2, C3, COL, K, PRESETS, T, TAB_TERMS, TAB_TEX, mo, tab_vars):
     _t = {**TAB_TERMS}
     for _i, _c in enumerate(["a1", "a2", "a3", "b1", "b2", "b3"]):
         _r, _col = ("r1", f"c{_i+1}") if _i < 3 else ("r2", f"c{_i-2}")
@@ -155,12 +155,12 @@ def _(C2, C3, COL, K, PRESETS, TAB_TERMS, TAB_TEX, mo, tab_vars):
          r"p_{11}p_{23}-p_{13}p_{21}=\out{m13}\qquad p_{12}p_{23}-p_{13}p_{22}=\out{m23}",
          r"\text{independent (all minors }0\text{)?}\ \out{indep}"],
         tab_vars(0.25, 0.10, 0.05, 0.05, 0.10), _t, live=True, presets=PRESETS))
-    mo.vstack([eq_mi, K.notice("Independence means every row is proportional to the same $p(y)$; then every log term is $\\log_2 1=0$ and the overlap disappears.")], gap=0.4)
+    mo.vstack([K.demo(T, "Mutual information, term by term", "Each cell of the joint table adds one log term to $I(X;Y)$; watch every term go to $0$ as the table approaches independence."), eq_mi, K.notice("Independence means every row is proportional to the same $p(y)$; then every log term is $\\log_2 1=0$ and the overlap disappears.")], gap=0.4)
     return (eq_mi,)
 
 
 @app.cell
-def _(C2, C3, COL, K, eq_mi, mo):
+def _(C2, C3, COL, K, T, eq_mi, mo):
     import math as _m
     _v = eq_mi.value["values"]
     _a1, _a2, _a3, _b1, _b2 = (_v[k] for k in ("a1", "a2", "a3", "b1", "b2"))
@@ -198,7 +198,7 @@ def _(C2, C3, COL, K, eq_mi, mo):
         f'<text x="190" y="206" font-size="15" font-weight="700" text-anchor="middle" fill="{COL}">overlap I(X;Y)={_mi:.2f}</text>'
         f'<text x="190" y="236" font-size="12" text-anchor="middle" fill="#52606D">'
         f'H(X|Y)={_s["HX_given_Y"]:.2f} (left only) · H(Y|X)={_s["HY_given_X"]:.2f} (right only)</text></svg>')
-    mo.vstack([venn, K.notice("Same table, one picture: circle **areas** (not radii) are $H(X)$ and $H(Y)$ and the overlap is $I(X;Y)$; drag toward independence and the circles pull apart.")], gap=0.3)
+    mo.vstack([K.demo(T, "The same table as an entropy Venn diagram", "Circle areas are $H(X)$ and $H(Y)$; the overlap is $I(X;Y)$, so drag the table above and watch the circles move."), venn, K.notice("Same table, one picture: circle **areas** (not radii) are $H(X)$ and $H(Y)$ and the overlap is $I(X;Y)$; drag toward independence and the circles pull apart.")], gap=0.3)
     return
 
 

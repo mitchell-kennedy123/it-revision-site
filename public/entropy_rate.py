@@ -57,7 +57,7 @@ def _(K, TID, mo):
 
 
 @app.cell
-def _(K, mo):
+def _(K, TID, mo):
     mk_eq = mo.ui.anywidget(K.LiveEq(
         [
             r"\mu=\Big(\tfrac{\beta}{\alpha+\beta},\tfrac{\alpha}{\alpha+\beta}\Big)=\big(\out{mu0},\out{mu1}\big)"
@@ -89,6 +89,7 @@ def _(K, mo):
                  "Asymmetric": {"a": .1, "b": .4}},
     ))
     mo.vstack([
+        K.demo(TID, "Memory lowers the entropy rate", "A two-state Markov chain: compare the entropy rate $\\bar H$ with the memoryless entropy $H(\\mu)$ and read the saving off the bars."),
         mk_eq,
         K.notice(r"With $\alpha=\beta$ the marginal stays at 1 bit, but $\bar H=H_2(\alpha)\to0$ as the chain gets sticky (or strictly alternating): memory is predictability. They match only when $\alpha+\beta=1$ (identical rows, i.e. i.i.d.)."),
     ], gap=0.4)
@@ -125,7 +126,7 @@ def _(K, TID, mo):
 
 
 @app.cell
-def _(K, mo):
+def _(K, TID, mo):
     aep_eq = mo.ui.anywidget(K.LiveEq(
         [
             r"\text{coin }\Pr(\text{head})=p=\drag{p}:\quad H=H_2(p)=\out{h}\ \text{bits},\quad n=\drag{n},\ \varepsilon=\drag{eps}",
@@ -157,6 +158,7 @@ def _(K, mo):
                  "Short n=5": {"p": .2, "n": 5, "eps": .12}},
     ))
     mo.vstack([
+        K.demo(TID, "The typical set is tiny but holds almost everything", "$\\Pr(A_\\varepsilon)$ is the chance a length-$n$ coin sequence is typical; the gap shows how small a fraction of all sequences that is."),
         aep_eq,
         K.notice(r"$\Pr(A_\varepsilon)\to1$ while the typical fraction $2^{-\mathrm{gap}}$ collapses to almost nothing; and the single most likely sequence is not typical once $\varepsilon<H(p)+\log_2\max(p,1-p)$ (tick becomes cross), and then stays out for every $n$."),
     ], gap=0.4)
@@ -208,7 +210,7 @@ def _(K, TID, mo):
 
 
 @app.cell
-def _(K, mo):
+def _(K, TID, mo):
     pl_eq = mo.ui.anywidget(K.LiveEq(
         [
             r"\text{counts }\begin{pmatrix}n_{00}&n_{01}\\n_{10}&n_{11}\end{pmatrix}=\begin{pmatrix}\drag{n00}&\drag{n01}\\\drag{n10}&\drag{n11}\end{pmatrix},\qquad \text{smoothing }\epsilon=\drag{e}\ (k=2)",
@@ -242,6 +244,7 @@ def _(K, mo):
                  "Alternating data": {"n00": 1, "n01": 20, "n10": 20, "n11": 1, "e": 0}},
     ))
     mo.vstack([
+        K.demo(TID, "Estimating the entropy rate from counts", "Enter observed transition counts and an add-$\\epsilon$ smoothing; see how the estimate $\\widehat H$ moves, especially with a zero count."),
         pl_eq,
         K.notice(r"One zero count ($n_{01}=0$) makes state 0 absorbing: $\hat\mu=(1,0)$ and $\widehat H=0$. Smoothing with $\epsilon=1$ revives the transition and the estimate jumps to about $0.54$. The row-share $\hat\pi=(0.53,0.47)$ gives $0.38$ instead: both are legitimate, so use the question's definition. Try $(72,8,12,28)$: $\widehat H\approx0.57$."),
     ], gap=0.4)

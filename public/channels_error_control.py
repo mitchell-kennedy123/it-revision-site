@@ -243,6 +243,7 @@ def _(bsc_eq, K, math, mo):
             + "</svg>")
     mo.vstack([
         K.section("channels_error_control", "Mutual information depends on the input"),
+        K.demo("channels_error_control", "Capacity of the binary symmetric channel", "Flip probability $\\alpha$ sets the channel; the input bias $q$ sets $I(X;Y)$, which peaks at the capacity $C$ when $q=\\tfrac12$."),
         bsc_eq,
         mo.Html(_svg),
         K.notice(r"The best input for the BSC is $q=\tfrac12$ for every $\alpha$ (green marker); orange is where you are. $C(\alpha)$ is symmetric about $\alpha=\tfrac12$ where it hits 0."),
@@ -328,6 +329,7 @@ def _(K, fano_inv, math, mo):
             "</svg>")
     mo.vstack([
         K.section("channels_error_control", "Fano: entropy forces errors"),
+        K.demo("channels_error_control", "Fano: the error floor you can't beat", "Given the leftover uncertainty $H(X\\mid Y)$ and alphabet size $M$, any error probability below the red curve is impossible."),
         fano_inv,
         mo.Html(_svg),
         K.notice(r"The test point must sit on or above the red floor curve (green); below it (red) the bound is violated. Higher $h$ lifts the floor; at $h=\log_2M$ the floor is $(M-1)/M$, pure guessing."),
@@ -339,6 +341,7 @@ def _(K, fano_inv, math, mo):
 def _(HammingLab, K, mo):
     mo.vstack([
         K.section("channels_error_control", "Hamming(7,4) syndrome decoding"),
+        K.demo("channels_error_control", "Hamming(7,4): the syndrome locates the flipped bit", "Flip bits in a codeword and watch the syndrome $s$ point to the error, or fail when two bits flip."),
         mo.ui.anywidget(HammingLab()),
         K.notice(r"With binary-position $H$ the syndrome read as $s_1+2s_2+4s_3$ is the error position; with the book's $H=[A\mid I_3]$ match it to a column. Two flips in plain Hamming are silently *mis*corrected; SECDED's overall parity exposes them."),
     ], gap=0.4)

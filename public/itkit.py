@@ -1013,6 +1013,16 @@ def ladder(topic: str, extra: str = ""):
     )
 
 
+def demo(topic: str, title: str, intro: str):
+    """Title + one plain sentence (what it shows, what to look at) placed directly above an interactive."""
+    t = TOPICS[topic]
+    return _mo().Html(
+        f'<div style="margin:14px 0 4px;padding:1px 0 1px 12px;border-left:4px solid {t["color"]}">'
+        f'<div style="font-size:16.5px;font-weight:700;color:#1F2933;line-height:1.35">{_html.escape(title)}</div>'
+        f'<div style="font-size:14.5px;color:#52606D;line-height:1.5;margin-top:1px">{_md_html(intro)}</div></div>'
+    )
+
+
 def section(topic: str, title: str):
     t = TOPICS[topic]
     return _mo().Html(

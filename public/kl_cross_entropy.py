@@ -70,7 +70,7 @@ def _(K, T, mo):
 
 
 @app.cell
-def _(K, mo):
+def _(K, T, mo):
     eq_kl = mo.ui.anywidget(K.LiveEq(
         [r"P=(\tfrac12,\tfrac14,\tfrac14),\quad Q=(\drag{q1},\ \drag{q2},\ \out{q3})",
          r"D(P\|Q)=(\out{t1})+(\out{t2})+(\out{t3})=\out{D}\ \text{bits}",
@@ -93,14 +93,14 @@ def _(K, mo):
                  "Q misses x₃ (D = ∞)": {"q1": 0.6, "q2": 0.4},
                  "Q reversed": {"q1": 0.25, "q2": 0.25},
                  "Default": {"q1": 0.1, "q2": 0.3}}))
-    mo.vstack([eq_kl,
+    mo.vstack([K.demo(T, "KL is not symmetric", "Move $Q$ against the fixed $P=(\\tfrac12,\\tfrac14,\\tfrac14)$ and compare $D(P\\|Q)$ with $D(Q\\|P)$ term by term."), eq_kl,
                K.notice("Starve $Q$ of a symbol that $P$ uses and $D(P\\|Q)$ explodes towards $\\infty$, while $D(Q\\|P)$ stays small: KL is not symmetric.")],
               gap=0.4)
     return
 
 
 @app.cell
-def _(K, mo):
+def _(K, T, mo):
     eq_ce = mo.ui.anywidget(K.LiveEq(
         [r"H_\times(P,Q)=-\drag{p}\log_2\drag{q}-\out{p1}\log_2\out{q1}=\out{Hx}=\underbrace{\out{Hp}}_{H(P)}+\underbrace{\out{D}}_{D_{\mathrm{KL}}(P\|Q)}\ \text{bits}"],
         {"p": dict(value=0.5, min=0.01, max=0.99, step=0.01, fmt=2, label="p = P(x₁)"),
@@ -117,14 +117,14 @@ def _(K, mo):
                  "Q too confident": {"p": 0.5, "q": 0.95},
                  "Q too vague": {"p": 0.9, "q": 0.5},
                  "Q wrong way": {"p": 0.9, "q": 0.1}}))
-    mo.vstack([eq_ce,
+    mo.vstack([K.demo(T, "Cross entropy = entropy + KL", "Choose a true $p$ and a model $q$ for a coin; the bar splits $H_\\times(P,Q)$ into the unavoidable $H(P)$ and the penalty $D(P\\|Q)$."), eq_ce,
                K.notice("The $H(P)$ block depends only on $p$; moving $q$ changes only the orange KL block, and it vanishes at $q=p$.")],
               gap=0.4)
     return
 
 
 @app.cell
-def _(K, mo):
+def _(K, T, mo):
     eq_fr = mo.ui.anywidget(K.LiveEq(
         [r"p(x)=\drag{w}\,\mathcal N(x;\,-\drag{m},1)+\out{w1}\,\mathcal N(x;\,+\out{mm},1)"],
         {"w": dict(value=0.65, min=0.1, max=0.9, step=0.05, fmt=2, px=200, label="w  left-bump weight"),
@@ -135,7 +135,7 @@ def _(K, mo):
                  "Lopsided 90/10": {"w": 0.9, "m": 4.0},
                  "Overlapping": {"w": 0.5, "m": 1.0},
                  "Merged (m = 0)": {"w": 0.65, "m": 0.0}}))
-    mo.vstack([eq_fr], gap=0)
+    mo.vstack([K.demo(T, "Forward vs reverse KL fit", "A single Gaussian is fitted to a two-bump target $p$ by minimising $D(p\\|q)$ (blue) or $D(q\\|p)$ (dashed); compare where each lands."), eq_fr], gap=0.3)
     return (eq_fr,)
 
 

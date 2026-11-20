@@ -104,6 +104,7 @@ def _(K, eq_crlb, math, mo):
             "</svg>")
     mo.vstack([
         K.section("estimation_model_selection", "Cramér-Rao: the variance floor"),
+        K.demo("estimation_model_selection", "No unbiased estimator beats the Cramér-Rao bound", "Estimating a coin's bias from $n$ flips: the MLE variance sits on the bound $p(1-p)/n$ while the add-$\\gamma$ estimator's MSE (dashed) may dip below it."),
         eq_crlb,
         mo.Html(_svg),
         K.notice("The unbiased MLE sits exactly on the bound at every $n$; a biased add-$\\gamma$ estimator can dip below it (small $n$, $p$ near $\\tfrac12$), which is why the bound needs unbiasedness."),
@@ -164,6 +165,7 @@ def _(K, eq_aic, math, mo):
             "</svg>")
     mo.vstack([
         K.section("estimation_model_selection", "AIC against BIC"),
+        K.demo("estimation_model_selection", "AIC and BIC can pick different models", "Model B has 3 extra parameters but fits $\\delta$ nats better per sample; vary $n$ and $\\delta$ to see which criterion picks B first."),
         eq_aic,
         mo.Html(_svg),
         K.notice("B's extra parameters cost a fixed $6$ under AIC but $3\\ln n$ under BIC (steeper once $n\\ge8$). The green gain line crosses the AIC line first, so AIC flips to B at smaller $n$."),
@@ -202,6 +204,7 @@ def _(K, mo):
     ))
     mo.vstack([
         K.section("estimation_model_selection", "Perplexity"),
+        K.demo("estimation_model_selection", "Perplexity from token probabilities", "Give three tokens their model probabilities: surprisals add up, average to $H_\\times$, and exponentiate to the perplexity."),
         eq_pp,
         K.notice("Perplexity is a geometric mean: one near-zero probability ruins it (the orange segment dominates the bar)."),
     ], gap=0.4)
@@ -238,6 +241,7 @@ def _(K, mo):
     ))
     mo.vstack([
         K.section("estimation_model_selection", "Maximum entropy"),
+        K.demo("estimation_model_selection", "Maximum entropy die with a fixed mean", "Set the required mean of a six-sided die; the maximum-entropy pmf is geometric in the face value, shown bar by bar."),
         eq_me,
         K.notice("Mean $3.5$ gives $\\lambda=0$ and a flat die; push the mean away and the pmf tilts geometrically (constant ratio $r$) while entropy falls below $\\log_26$."),
     ], gap=0.4)

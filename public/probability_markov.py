@@ -134,6 +134,7 @@ def _(LE, K, TID, mo):
                  "Useless test (s = f)": {"pi": 0.20, "s": 0.50, "f": 0.50},
                  "Very rare, sharp test": {"pi": 0.005, "s": 0.99, "f": 0.01}}))
     mo.vstack([
+        K.demo(TID, "Bayes: why a positive test can still mean you're probably healthy", "The bar splits all positive tests into true (blue) and false (rust) positives; the blue share is $\\Pr(D\\mid +)$."),
         _eq,
         K.notice("The blue share of the bar is the posterior; drag the prior $\\pi$ up and watch the false-positive slice (rust) shrink."),
     ], gap=0.4)
@@ -180,6 +181,7 @@ def _(LE, K, TID, mo):
                  "Rare success": {"n": 200, "p": 0.1, "t": 40},
                  "Barely above mean": {"n": 150, "p": 0.4, "t": 65}}))
     mo.vstack([
+        K.demo(TID, "Tail bounds against the exact binomial tail", "Three bounds on $\\Pr(X\\ge t)$ against the exact tail; each bar is $-\\log_{10}$ of the value, so longer means tighter."),
         _eq,
         K.notice("Markov $\\approx0.75$, Chebyshev $\\approx0.09$, Hoeffding $\\approx4.8\\times10^{-3}$, exact $\\approx6.5\\times10^{-4}$: all valid, none tight. Raise $n$ and Hoeffding collapses exponentially while Markov never moves. Bars show $-\\log_{10}$ of each bound: longer = tighter (full bar = $10^{-8}$ or smaller)."),
     ], gap=0.4)
@@ -219,7 +221,7 @@ def _(LE, K, TID, mo):
 
 
 @app.cell
-def _(K, eq_stat, mo):
+def _(K, TID, eq_stat, mo):
     _v = (eq_stat.value or {}).get("values") or {}
     _a, _b, _n = float(_v.get("a", 0.3)), float(_v.get("b", 0.1)), int(_v.get("n", 0))
     _lam = 1 - _a - _b
@@ -242,7 +244,8 @@ def _(K, eq_stat, mo):
         f'<text x="{(_L+_W)/2:.0f}" y="{_H-8}" text-anchor="middle" font-size="11" fill="#52606D">step n</text>'
         f'{_lim}{_line}'
         f'<text x="{_L+6}" y="{_T+10}" font-size="11" fill="#0072B2">μₙ(0) from start in state 0</text></svg>')
-    mo.vstack([eq_stat, _conv,
+    mo.vstack([K.demo(TID, "A Markov chain forgets its start", "Start in state 0 and step forward: the curve shows $\\mu_n(0)$ settling onto the limit $\\mu^{*}(0)$."),
+               eq_stat, _conv,
                K.notice("The distance to $\\mu^*$ shrinks by $|\\lambda|=|1-\\alpha-\\beta|$ every step: the smaller $|\\lambda|$, the faster the chain forgets its start. The lower bar is the limit.")], gap=0.3)
     return
 

@@ -296,7 +296,7 @@ def _(K, TID, mo):
     K.section(TID, "1. Kraft and prefix codes")
     return
 @app.cell(hide_code=True)
-def _(LE, K, mo):
+def _(LE, K, TID, mo):
     kraft_eq = mo.ui.anywidget(LE(
         [r"D=\drag{D}\ \text{(alphabet size)},\qquad \ell=(\drag{l1},\ \drag{l2},\ \drag{l3},\ \drag{l4},\ \drag{l5})",
          r"K=\sum_i D^{-\ell_i}=\out{a}+\out{b}+\out{c}+\out{d}+\out{g}=\out{K}\qquad K\le 1\ \Rightarrow\ \out{ok}",
@@ -325,7 +325,7 @@ def _(LE, K, mo):
                  "Slack (2,3,3,4,4)": dict(D=2, l1=2, l2=3, l3=3, l4=4, l5=4),
                  "Flat (3,3,3,3,3)": dict(D=2, l1=3, l2=3, l3=3, l4=3, l5=3),
                  "Complete ternary (1,1,2,2,2)": dict(D=3, l1=1, l2=1, l3=2, l4=2, l5=2)}))
-    kraft_eq
+    mo.vstack([K.demo(TID, "Kraft: how much of the code tree is claimed", "Pick codeword lengths; each word claims $D^{-\\ell}$ of the tree, and a prefix code exists only if the total $K\\le1$."), kraft_eq], gap=0.3)
     return (kraft_eq,)
 
 
@@ -355,10 +355,10 @@ def _(K, TID, mo):
     K.section(TID, "2. Huffman and Shannon codes")
     return
 @app.cell(hide_code=True)
-def _(mo):
+def _(K, TID, mo):
     huff_preset = mo.ui.radio(options=["Book example (4,3,2,1)", "Dyadic (8,4,2,2)", "Skewed (60,2,1,1)", "Five symbols (30,25,20,15,10)"],
                               value="Book example (4,3,2,1)", inline=False, label="Preset")
-    huff_preset
+    mo.vstack([K.demo(TID, "Huffman tree from the probabilities", "Choose symbol weights: the Huffman code gives the optimal expected length $L$, shown against the entropy $H$ and the Shannon code."), huff_preset], gap=0.3)
     return (huff_preset,)
 
 
@@ -434,7 +434,7 @@ def _(K, TID, mo):
     K.section(TID, "3. Block coding")
     return
 @app.cell(hide_code=True)
-def _(LE, HUFF_JS, K, mo, redraw):
+def _(LE, HUFF_JS, K, TID, mo, redraw):
     block_eq = mo.ui.anywidget(LE(
         [r"H_2(\drag{p})=\out{H}\ \text{bits/symbol},\qquad \text{block size } n=\drag{n}\ (2^n=\out{M}\text{ blocks})",
          r"L_n=\sum_{\text{blocks}}\Pr\cdot\ell=\out{Ln}\ \text{bits per block}\ \Rightarrow\ \frac{L_n}{n}=\out{per}",
@@ -457,7 +457,7 @@ def _(LE, HUFF_JS, K, mo, redraw):
         presets={"Skewed, n=1": {"p": .1, "n": 1}, "Skewed, n=4": {"p": .1, "n": 4},
                  "Very skewed, n=6": {"p": .02, "n": 6}, "Fair coin": {"p": .5, "n": 3},
                  "Mild skew, n=8": {"p": .3, "n": 8}}))
-    mo.vstack([block_eq, redraw(),
+    mo.vstack([K.demo(TID, "Block coding approaches the entropy", "Huffman-code blocks of $n$ symbols from a biased coin: the cost per symbol $L_n/n$ is squeezed between $H$ and $H+1/n$."), block_eq, redraw(),
                K.notice("The orange gap is squeezed under $1/n$: bigger blocks pay the extra bit once for many symbols, but the code table doubles with each $n$.")],
               gap=0.4)
     return (block_eq,)
