@@ -27,8 +27,23 @@ def _(K, mo):
 
 
 @app.cell
+def _(K, cmap, mo):
+    mo.vstack([
+        mo.Html('<div style="margin:18px 0 4px"><div style="font-size:21px;font-weight:700;color:#1F2933">The map</div>'
+                '<div style="font-size:14.5px;color:#52606D">Each arrow carries the identity that links two ideas. Colours match the topic pages. '
+                'Compression sits top left, communication bottom left, learning bottom right.</div></div>'),
+        K.predict("Pick a node and say its key identity before you click it, or trace a chain and say each link before revealing."),
+        cmap,
+        K.notice("$H$ is the floor: $L\\ge H(X)$ for any prefix code, $I(X;Y)\\le H(X)$ so $C\\le\\log_2|\\mathcal X|$ (and $\\le\\log_2|\\mathcal Y|$), "
+                 "and the average log-loss of a model is $H_\\times(\\hat P,Q)=H(\\hat P)+D_{\\mathrm{KL}}(\\hat P\\|Q)$. "
+                 "So MLE minimises KL, and perplexity is just $2^{H_\\times}$."),
+    ], gap=0.6)
+    return
+
+
+@app.cell
 def _(K, mo):
-    # "If the question says ..." finder FIRST: the most useful night-before feature.
+    # "If the question says ..." finder, after the map.
     _finder = [
         ("capacity, equivocation, BSC / BEC / Z, rate of a code", "channels_error_control"),
         ("minimum error probability, Fano", "channels_error_control"),
@@ -236,7 +251,7 @@ def _(bands, chains, edges, mo, nodes):
       const nodes = model.get('nodes'), edges = model.get('edges'), bands = model.get('bands'), chains = model.get('chains');
       const byId = {}; nodes.forEach(n => byId[n.id] = n);
       let sel = '', quiz = false, chain = '', shown = new Set(), W = 0;
-      const WIDE = 1000;
+      const WIDE = 640, DESIGN = 1000;   // map is drawn at >=1000 px design width and scaled down to WIDE; stacked list below that (phones)
       const eid = e => e.s + '>' + e.t;
       const incident = id => edges.filter(e => e.s === id || e.t === id);
 
@@ -448,17 +463,41 @@ def _(bands, chains, edges, mo, nodes):
           });
           if (sel && ids.includes(sel)) wrap.appendChild(panelFor(byId[sel]));
         });
+        const lh = document.createElement('div'); lh.className = 'gh'; lh.textContent = sel ? 'Links of ' + byId[sel].label : 'All links (from \u2192 to)'; wrap.appendChild(lh);
+        const ll = document.createElement('div'); ll.style.cssText = 'display:flex;flex-direction:column;gap:5px;font-size:13.5px';
+        (sel ? incident(sel) : edges).forEach(e => {
+          const r = document.createElement('div'); r.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;border:1px solid #E3E7EC;border-radius:8px;padding:4px 8px;background:#fff';
+          r.innerHTML = '<b>' + esc(byId[e.s].label) + '</b> \u2192 <b>' + esc(byId[e.t].label) + '</b><span style="color:#3E4C59">' + tex(e.label, false) + '</span>';
+          ll.appendChild(r);
+        });
+        wrap.appendChild(ll);
         return wrap;
       }
 
       function draw() {
-        W = Math.floor(el.getBoundingClientRect().width) || 1000;
+        const avail = Math.floor(el.getBoundingClientRect().width) || 1000;
+        const isWide = avail >= WIDE;
+        const scale = isWide ? Math.min(1, avail / DESIGN) : 1;
+        W = isWide ? Math.max(DESIGN, avail) : avail;
         root.innerHTML = '';
         root.appendChild(bar());
-        const isWide = W >= WIDE;
         const body = isWide ? wide() : stacked();
-        root.appendChild(body);
-        if (body._place) { body._place(); l2.addEventListener('load', () => body._place()); setTimeout(() => body._place(), 600); }
+        let host = body;
+        if (isWide && scale < 1) {
+          host = document.createElement('div'); host.className = 'scalehost'; host.style.width = avail + 'px';
+          body.style.width = W + 'px'; body.style.transformOrigin = '0 0'; body.style.transform = 'scale(' + scale + ')';
+          host.appendChild(body);
+        }
+        root.appendChild(host);
+        const fit = () => { if (host !== body) host.style.height = (parseFloat(body.style.height) * scale) + 'px'; };
+        fit();
+        const place = () => {
+          if (!body._place) return;
+          // measure in unscaled coordinates, then re-apply the scale
+          const tf = body.style.transform; body.style.transform = 'none';
+          body._place(); body.style.transform = tf;
+        };
+        if (body._place) { place(); l2.addEventListener('load', place); setTimeout(place, 600); }
         const ch = chains.find(c => c.id === chain);
         if (ch) root.appendChild(chainPanel(ch));
         else if (isWide) {
@@ -477,6 +516,7 @@ def _(bands, chains, edges, mo, nodes):
     _MAPCSS = """
     .hm { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1F2933; max-width: 100%; box-sizing: border-box; }
     .hm * { box-sizing: border-box; }
+    .hm .scalehost { overflow: hidden; position: relative; }
     .hm .bar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 10px; }
     .hm .sw { display: flex; gap: 8px; align-items: center; font-size: 14px; color: #3E4C59; cursor: pointer; }
     .hm .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -530,21 +570,6 @@ def _(bands, chains, edges, mo, nodes):
 
     cmap = mo.ui.anywidget(HomeMap(nodes=nodes, edges=edges, bands=bands, chains=chains))
     return (cmap,)
-
-
-@app.cell
-def _(K, cmap, mo):
-    mo.vstack([
-        mo.Html('<div style="margin:18px 0 4px"><div style="font-size:21px;font-weight:700;color:#1F2933">The map</div>'
-                '<div style="font-size:14.5px;color:#52606D">Each arrow carries the identity that links two ideas. Colours match the topic pages. '
-                'Compression sits top left, communication bottom left, learning bottom right.</div></div>'),
-        K.predict("Pick a node and say its key identity before you click it, or trace a chain and say each link before revealing."),
-        cmap,
-        K.notice("$H$ is the floor: $L\\ge H(X)$ for any prefix code, $I(X;Y)\\le H(X)$ so $C\\le\\log_2|\\mathcal X|$ (and $\\le\\log_2|\\mathcal Y|$), "
-                 "and the average log-loss of a model is $H_\\times(\\hat P,Q)=H(\\hat P)+D_{\\mathrm{KL}}(\\hat P\\|Q)$. "
-                 "So MLE minimises KL, and perplexity is just $2^{H_\\times}$."),
-    ], gap=0.6)
-    return
 
 
 @app.cell

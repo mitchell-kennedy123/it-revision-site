@@ -173,7 +173,8 @@ function render({ model, el }) {
   const eqBox = document.createElement('div'); eqBox.className = 'eqs';
   const barBox = document.createElement('div'); barBox.className = 'bars';
   const hint = document.createElement('div'); hint.className = 'hint';
-  root.append(eqBox, barBox, hint);
+  const presetBox = document.createElement('div'); presetBox.className = 'presets';
+  root.append(presetBox, eqBox, barBox, hint);
 
   let vals = Object.assign({}, model.get('values'));
   const specs = model.get('vars');
@@ -272,16 +273,104 @@ function render({ model, el }) {
     const out = evaluate();
     let lines = model.get('tex');
     if (typeof lines === 'string') lines = [lines];
-    eqBox.innerHTML = lines.map(l => '<div class="line">' + tex(substitute(l, out), true) + '</div>').join('');
+    eqBox.innerHTML = lines.map(l => '<div class="line"><div class="eqrow">' + tex(substitute(l, out), true) + '</div></div>').join('');
     eqBox.querySelectorAll('.ledrag').forEach(n => {
       const name = [...n.classList].find(c => c.startsWith('lev-')).slice(4);
+      const sp = specs[name] || {};
       n.tabIndex = 0; n.dataset.name = name;
-      n.setAttribute('role', 'slider'); n.setAttribute('aria-label', name);
+      n.setAttribute('role', 'slider'); n.setAttribute('aria-label', sp.label || name);
+      n.setAttribute('aria-valuenow', vals[name]);
+      const lo = bound(sp, 'min'), hi = bound(sp, 'max');
+      n.title = (sp.label || name) + (isFinite(lo) || isFinite(hi) ? '   range ' + (isFinite(lo) ? fmtNum(lo, sp.fmt) : '-inf') + ' to ' + (isFinite(hi) ? fmtNum(hi, sp.fmt) : 'inf') : '') + '   (drag or arrow keys)';
       if (drag && drag.name === name) n.classList.add('active');
       if (focusName === name && !drag) n.focus({ preventScroll: true });
     });
     drawBars(out);
+    drawPresets();
+    placeCaps();
     return out;
+  }
+
+  // caption tags: one strip under each equation line, each tag centred under its chip,
+  // stacked into extra rows when neighbours would overlap (so they never touch KaTeX or each other)
+  function placeCaps() {
+    eqBox.querySelectorAll('.line').forEach(line => {
+      const old = line.querySelector('.caps'); if (old) old.remove();
+      const chips = [...line.querySelectorAll('.ledrag')];
+      line.classList.toggle('haschips', chips.length > 0);
+      if (!chips.length) return;
+      if (chips.length > 1) chips.forEach((n, i) => n.dataset.i = String(i + 1)); else chips.forEach(n => delete n.dataset.i);
+      const caps = document.createElement('div'); caps.className = 'caps';
+      line.appendChild(caps);
+      const base = caps.getBoundingClientRect();
+      const tags = chips.map(n => {
+        const name = n.dataset.name, sp = specs[name] || {};
+        const t = document.createElement('span'); t.className = 'cap'; t.dataset.name = name;
+        t.textContent = (n.dataset.i ? n.dataset.i + '  ' : '') + (sp.label || name);
+        if (drag && drag.name === name) t.classList.add('active');
+        caps.appendChild(t);
+        const r = n.getBoundingClientRect();
+        return { t, cx: r.left + r.width / 2 - base.left };
+      });
+      tags.sort((a, b) => a.cx - b.cx);
+      const rowEnd = [], W = base.width;
+      for (const g of tags) {
+        const w = g.t.offsetWidth;
+        let left = Math.min(Math.max(0, g.cx - w / 2), Math.max(0, W - w));
+        let row = 0;
+        while (rowEnd[row] !== undefined && left < rowEnd[row] + 6) row++;
+        rowEnd[row] = left + w;
+        g.t.style.left = left + 'px'; g.t.style.top = (row * 22) + 'px';
+        g.t.style.setProperty('--notch', (g.cx - left) + 'px');
+      }
+      caps.style.height = (rowEnd.length * 22 + 2) + 'px';
+    });
+  }
+
+  function approx(a, b) { return Math.abs(a - b) < 1e-9 * Math.max(1, Math.abs(a), Math.abs(b)); }
+  function activePreset() {
+    const P = model.get('presets') || {};
+    for (const nm in P) if (Object.keys(P[nm]).every(k => k in vals && approx(vals[k], P[nm][k]))) return nm;
+    return null;
+  }
+  function drawPresets() {
+    const P = model.get('presets') || {};
+    const names = Object.keys(P);
+    presetBox.style.display = names.length ? '' : 'none';
+    if (presetBox.dataset.sig !== JSON.stringify(P)) {
+      presetBox.dataset.sig = JSON.stringify(P);
+      presetBox.innerHTML = '<span class="plab">Presets</span>';
+      names.forEach(nm => {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'pill'; b.textContent = nm; b.dataset.p = nm;
+        b.title = Object.keys(P[nm]).map(k => k + ' = ' + P[nm][k]).join(', ');
+        b.addEventListener('click', () => applyPreset(nm));
+        presetBox.appendChild(b);
+      });
+    }
+    const act = activePreset();
+    presetBox.querySelectorAll('.pill').forEach(b => b.classList.toggle('on', b.dataset.p === act));
+  }
+  let anim = 0, pendingFinish = null;
+  function applyPreset(nm) {
+    const tgt = (model.get('presets') || {})[nm]; if (!tgt) return;
+    const keys = Object.keys(tgt).filter(k => k in specs);
+    const from = {}; keys.forEach(k => from[k] = vals[k]);
+    const t0 = performance.now(), D = 260, id = ++anim;
+    const finish = () => {
+      pendingFinish = null;
+      for (let pass = 0; pass < 3; pass++) keys.forEach(k => setVal(k, tgt[k]));
+      keys.forEach(k => { const sp = specs[k]; const v = Math.min(bound(sp, 'max'), Math.max(bound(sp, 'min'), tgt[k])); vals[k] = Number(v.toFixed(10)); });
+      draw(); sync();
+    };
+    pendingFinish = finish;
+    const tick = (now) => {
+      if (id !== anim) return;
+      const f = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - f, 3);
+      if (f >= 1 || document.hidden) { finish(); return; }
+      keys.forEach(k => setVal(k, from[k] + (tgt[k] - from[k]) * e));
+      draw(); requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   }
 
   function setVal(name, v) {
@@ -304,10 +393,19 @@ function render({ model, el }) {
     model.save_changes();
   }
 
+  // hover link between chip and its caption tag
+  const hl = (e, on) => {
+    const n = e.target.closest && e.target.closest('.ledrag, .cap'); if (!n) return;
+    eqBox.querySelectorAll('.ledrag[data-name="' + n.dataset.name + '"], .cap[data-name="' + n.dataset.name + '"]')
+      .forEach(x => x.classList.toggle('hl', on));
+  };
+  root.addEventListener('pointerover', e => hl(e, true));
+  root.addEventListener('pointerout', e => hl(e, false));
   let lastLive = 0;
   root.addEventListener('pointerdown', (e) => {
     const n = e.target.closest('.ledrag'); if (!n) return;
     e.preventDefault();
+    if (pendingFinish) { anim++; pendingFinish(); } else anim++;
     drag = { name: n.dataset.name, x0: e.clientX, v0: vals[n.dataset.name] };
     focusName = drag.name;
     try { root.setPointerCapture(e.pointerId); } catch (_) {}
@@ -347,6 +445,8 @@ function render({ model, el }) {
 
   hint.textContent = model.get('hint');
   compile(); draw();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeCaps);
+  if (window.ResizeObserver) { let w0 = 0; new ResizeObserver(() => { const w = root.clientWidth; if (w !== w0) { w0 = w; placeCaps(); } }).observe(root); }
   // send initial computed outputs so python sees them without a drag
   setTimeout(sync, 0);
   model.on('change:values', () => {
@@ -364,11 +464,24 @@ export default { render };
 _LIVEEQ_CSS = _CSS_COMMON + """
 .liveeq { padding: 6px 4px 2px; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
 .liveeq .line { padding: 2px 0; }
-.liveeq .ledrag { cursor: ew-resize; background: rgba(0,114,178,.10); box-shadow: inset 0 0 0 1px rgba(0,114,178,.35); padding: 0 2px; border-radius: 3px;
-  touch-action: none; outline: none; transition: background .12s; }
-.liveeq .ledrag:hover, .liveeq .ledrag:focus, .liveeq .ledrag.active { background: rgba(0,114,178,.22); }
+.liveeq .line.haschips { padding: 6px 0 4px; }
+.liveeq .eqrow { line-height: 1.5; }
+.liveeq .caps { position: relative; margin-top: 4px; }
+.liveeq .cap { position: absolute; font: 600 11px/18px system-ui, -apple-system, sans-serif; white-space: nowrap; color: #0B5C8E;
+  background: #E3F1FB; border: 1px solid #9CCBEA; border-radius: 9px; padding: 0 8px; }
+.liveeq .cap.active, .liveeq .cap.hl { background: #0072B2; color: #fff; border-color: #0072B2; }
+.liveeq .ledrag { cursor: ew-resize; background: #D6EBFA; box-shadow: 0 0 0 1.5px #3B93D0; padding: 0 5px 0 2px; margin: 0 3px; border-radius: 5px;
+  touch-action: none; outline: none; transition: background .12s, box-shadow .12s; }
+.liveeq .ledrag::after { content: "↔" attr(data-i); font: 700 .62em/1 system-ui, sans-serif; color: #0072B2; margin-left: 3px; vertical-align: .12em; }
+.liveeq .ledrag:hover, .liveeq .ledrag.hl, .liveeq .ledrag.active { background: #B5DAF5; box-shadow: 0 0 0 2px #0072B2; }
+.liveeq .ledrag:focus-visible { background: #B5DAF5; box-shadow: 0 0 0 2px #fff, 0 0 0 4px #0072B2; }
 .liveeq.dragging, .liveeq.dragging * { cursor: ew-resize !important; }
-.liveeq .leout { background: rgba(31,41,51,.06); border-radius: 4px; padding: 1px 3px; }
+.liveeq .leout { color: #3E4C59; }
+.liveeq .presets { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 6px; }
+.liveeq .plab { font-size: 12px; color: #6B7785; margin-right: 2px; }
+.itk .presets button.pill { padding: 3px 11px; font-size: 13px; border-radius: 999px; border: 1px solid #9CCBEA; background: #fff; color: #0B5C8E; }
+.itk .presets button.pill:hover { background: #E3F1FB; }
+.itk .presets button.pill.on { background: #0072B2; color: #fff; border-color: #0072B2; }
 .liveeq .hint { font-size: 12px; color: #8A95A3; margin-top: 2px; text-align: center; }
 .liveeq .bars { margin: 6px auto 2px; max-width: 560px; }
 .liveeq .brow { display: grid; grid-template-columns: minmax(70px, 22%) 1fr 52px; gap: 8px; align-items: center; margin: 5px 0; }
@@ -396,6 +509,14 @@ if anywidget is not None:
         bars:  optional stacked bars drawn under the equation:
                [dict(label="H×(P,Q)", segs=[dict(term="Hp", color="#009E73", label="H(P)"), ...]), ...]
         bar_max: fixed bar scale (default auto).
+        label (per var, optional): e.g. dict(value=.2, min=0, max=1, label="α  (P 0→1)"). Shown as a
+               caption tag under the equation line, aligned beneath its chip (var name if omitted),
+               and in a hover tooltip with the range.
+        presets: {"Fair coin": {"p": .5}, "Almost certain": {"p": .99}}  pill buttons above the
+               equation; click animates the vars (clamped to min/max), syncs to python like a
+               drag release, and the pill whose values match stays highlighted (clears on drag).
+        Draggable numbers render as blue chips with a left-right arrow glyph; computed terms
+        (\\out) render as plain grey text.
         live:  also sync to python while dragging (throttled). Default: sync on release.
         Python reads: widget.values (dict of vars), widget.outputs (dict of terms).
         """
@@ -410,11 +531,12 @@ if anywidget is not None:
         bars = T.List().tag(sync=True)
         bar_max = T.Float(0.0).tag(sync=True)
         live = T.Bool(False).tag(sync=True)
+        presets = T.Dict().tag(sync=True)
         drag_color = T.Unicode("#0072B2").tag(sync=True)
         out_color = T.Unicode("#1F2933").tag(sync=True)
-        hint = T.Unicode("drag the blue-boxed numbers left/right (or focus + arrow keys)").tag(sync=True)
+        hint = T.Unicode("drag the blue chips (↔) left/right, or focus one and use arrow keys; pills above set presets; plain grey numbers are computed").tag(sync=True)
 
-        def __init__(self, tex, vars, terms=None, bars=None, **kw):
+        def __init__(self, tex, vars, terms=None, bars=None, presets=None, **kw):
             terms = {k: (v if isinstance(v, dict) else {"expr": v}) for k, v in (terms or {}).items()}
             _bad = sorted((set(vars) | set(terms)) & _JS_RESERVED)
             if _bad:
@@ -427,7 +549,7 @@ if anywidget is not None:
                 raise ValueError(f"LiveEq: names {_both} are used as both a var and a term")
             vars = {k: dict(v) for k, v in vars.items()}
             values = {k: v.get("value", 0) for k, v in vars.items()}
-            super().__init__(tex=tex, vars=vars, terms=terms, bars=bars or [], values=values, **kw)
+            super().__init__(tex=tex, vars=vars, terms=terms, bars=bars or [], values=values, presets=presets or {}, **kw)
 
         def get(self, name, default=None):
             """Value of a var or computed term (python side)."""
