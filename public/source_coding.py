@@ -45,8 +45,8 @@ def _():
                "return len;})")
 
     def W(x):
-        """Wrap a card so long equations scroll inside it instead of widening the page."""
-        return mo.Html(f'<div class="wcard" style="max-width:100%;min-width:0;overflow-x:auto">{x.text}</div>')
+        """Wrap a card so it never widens the page."""
+        return mo.Html(f'<div class="wcard" style="max-width:100%;min-width:0">{x.text}</div>')
 
     def Cn(*a, **k):
         return W(K.concept(*a, **k))
@@ -147,7 +147,7 @@ def _():
                   f'<span style="color:#E69F00">&#9679;</span> codeword &nbsp; '
                   f'<span style="color:{TEAL}">&#9711;</span> free (unused subtree)'
                   + (f" &nbsp; {sub}" if sub else "") + "</div>")
-        return (f'<div style="max-width:{width}px;margin:0 auto;overflow-x:auto"><svg viewBox="0 0 {width} {Ht}" '
+        return (f'<div style="max-width:{width}px;margin:0 auto"><svg viewBox="0 0 {width} {Ht}" '
                 f'style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">'
                 + "".join(lines) + "".join(nodes) + "</svg>" + legend + "</div>")
 
@@ -267,8 +267,7 @@ def _():
 
 @app.cell(hide_code=True)
 def _(K, TID, mo):
-    _css = mo.Html("<style>.katex-display{overflow-x:auto;overflow-y:hidden;max-width:100%}"
-                   "svg{max-width:100%;height:auto}table{max-width:100%}"
+    _css = mo.Html("<style>svg{max-width:100%;height:auto}table{max-width:100%}"
                    ".wcard,.wcard div{overflow-wrap:anywhere;min-width:0}</style>")
     _hdr = K.header(TID, "Source coding & compression",
                     "Kraft, Shannon and Huffman codes, block coding, arithmetic coding, run-length and LZ: formulas and intuition for reference.")
@@ -302,12 +301,12 @@ def _(LE, K, mo):
         [r"D=\drag{D}\ \text{(alphabet size)},\qquad \ell=(\drag{l1},\ \drag{l2},\ \drag{l3},\ \drag{l4},\ \drag{l5})",
          r"K=\sum_i D^{-\ell_i}=\out{a}+\out{b}+\out{c}+\out{d}+\out{g}=\out{K}\qquad K\le 1\ \Rightarrow\ \out{ok}",
          r"\text{unused fraction of the tree } 1-K=\out{free}\ =\ \out{fl}\ \text{of the }\out{tot}\text{ leaves at depth }\ell_{\max}=\out{lm}"],
-        {"D": dict(value=2, min=2, max=3, step=1, fmt="int", px=80),
-         "l1": dict(value=1, min=1, max=4, step=1, fmt="int", px=100),
-         "l2": dict(value=2, min=1, max=4, step=1, fmt="int", px=100),
-         "l3": dict(value=3, min=1, max=4, step=1, fmt="int", px=100),
-         "l4": dict(value=4, min=1, max=4, step=1, fmt="int", px=100),
-         "l5": dict(value=4, min=1, max=4, step=1, fmt="int", px=100)},
+        {"D": dict(value=2, min=2, max=3, step=1, fmt="int", px=80, label="D  (alphabet size)"),
+         "l1": dict(value=1, min=1, max=4, step=1, fmt="int", px=100, label="ℓ₁  (A length)"),
+         "l2": dict(value=2, min=1, max=4, step=1, fmt="int", px=100, label="ℓ₂  (B length)"),
+         "l3": dict(value=3, min=1, max=4, step=1, fmt="int", px=100, label="ℓ₃  (C length)"),
+         "l4": dict(value=4, min=1, max=4, step=1, fmt="int", px=100, label="ℓ₄  (D length)"),
+         "l5": dict(value=4, min=1, max=4, step=1, fmt="int", px=100, label="ℓ₅  (E length)")},
         {"a": dict(expr="pow(D,-l1)", fmt=4), "b": dict(expr="pow(D,-l2)", fmt=4),
          "c": dict(expr="pow(D,-l3)", fmt=4), "d": dict(expr="pow(D,-l4)", fmt=4), "g": dict(expr="pow(D,-l5)", fmt=4),
          "K": dict(expr="a+b+c+d+g", fmt=4),
@@ -320,7 +319,12 @@ def _(LE, K, mo):
             dict(term="a", color="#E69F00", label="A"), dict(term="b", color="#0072B2", label="B"),
             dict(term="c", color="#009E73", label="C"), dict(term="d", color="#CC79A7", label="D"),
             dict(term="g", color="#D55E00", label="E")])],
-        bar_max=1.0, live=True))
+        bar_max=1.0, live=True,
+        presets={"Complete binary (1,2,3,4,4)": dict(D=2, l1=1, l2=2, l3=3, l4=4, l5=4),
+                 "Over-full (1,1,2,2,3)": dict(D=2, l1=1, l2=1, l3=2, l4=2, l5=3),
+                 "Slack (2,3,3,4,4)": dict(D=2, l1=2, l2=3, l3=3, l4=4, l5=4),
+                 "Flat (3,3,3,3,3)": dict(D=2, l1=3, l2=3, l3=3, l4=3, l5=3),
+                 "Complete ternary (1,1,2,2,2)": dict(D=3, l1=1, l2=1, l3=2, l4=2, l5=2)}))
     kraft_eq
     return (kraft_eq,)
 
@@ -368,7 +372,8 @@ def _(LE, HUFF_JS, huff_preset, mo):
          r"H=\out{Hx}\ \le\ L=\out{L}\ <\ H+1=\out{H1}\quad \out{chk}",
          r"\text{redundancy } L-H=\out{red}\ \text{bits},\qquad \text{efficiency } \tfrac{H}{L}=\out{eff}",
          r"\ell_{\text{Sh}}=\lceil-\log_2 p_i\rceil=(\out{s1},\out{s2},\out{s3},\out{s4},\out{s5}),\qquad L_{\text{Sh}}=\out{Ls}\ \ \out{cmp}\ L_{\text{Huff}}"],
-        {f"w{i + 1}": dict(value=_w0[i], min=(0 if i == 4 else 1), max=64, step=1, fmt="int", px=260) for i in range(5)},
+        {f"w{i + 1}": dict(value=_w0[i], min=(0 if i == 4 else 1), max=64, step=1, fmt="int", px=260,
+                            label=f"w{'₁₂₃₄₅'[i]}  (weight of {'ABCDE'[i]})") for i in range(5)},
         {"W": dict(expr="w1+w2+w3+w4+w5", fmt="int"),
          "p5": dict(expr="w5/W", fmt=3),
          "p1": dict(expr="w1/W", fmt=3), "p2": dict(expr="w2/W", fmt=3),
@@ -435,8 +440,8 @@ def _(LE, HUFF_JS, K, mo, redraw):
          r"L_n=\sum_{\text{blocks}}\Pr\cdot\ell=\out{Ln}\ \text{bits per block}\ \Rightarrow\ \frac{L_n}{n}=\out{per}",
          r"H=\out{H}\ \le\ \frac{L_n}{n}=\out{per}\ <\ H+\tfrac1n=\out{up}\quad \out{chk}",
          r"\text{efficiency } \frac{H}{L_n/n}=\out{eff}"],
-        {"p": dict(value=0.1, min=0.02, max=0.5, step=0.01, fmt=2),
-         "n": dict(value=1, min=1, max=8, step=1, fmt="int", px=150)},
+        {"p": dict(value=0.1, min=0.02, max=0.5, step=0.01, fmt=2, label="p  (P of a 1)"),
+         "n": dict(value=1, min=1, max=8, step=1, fmt="int", px=150, label="n  (block size)")},
         {"H": dict(expr="H2(p)", fmt=3), "M": dict(expr="pow(2,n)", fmt="int"),
          "probs": dict(expr="(()=>{const a=[];for(let k=0;k<=n;k++){const m=round(choose(n,k));"
                             "for(let j=0;j<m;j++)a.push(pow(p,k)*pow(1-p,n-k));}return a;})()"),
@@ -448,12 +453,48 @@ def _(LE, HUFF_JS, K, mo, redraw):
          "gap": dict(expr="per-H", fmt=3)},
         bars=[dict(label="$L_n/n$", segs=[dict(term="H", color="#009E73", label="H"),
                                            dict(term="gap", color="#E69F00", label="gap")])],
-        bar_max=1.1, live=False))
+        bar_max=1.1, live=False,
+        presets={"Skewed, n=1": {"p": .1, "n": 1}, "Skewed, n=4": {"p": .1, "n": 4},
+                 "Very skewed, n=6": {"p": .02, "n": 6}, "Fair coin": {"p": .5, "n": 3},
+                 "Mild skew, n=8": {"p": .3, "n": 8}}))
     mo.vstack([block_eq, redraw(),
                K.notice("The orange gap is squeezed under $1/n$: bigger blocks pay the extra bit once for many symbols, but the code table doubles with each $n$.")],
               gap=0.4)
     return (block_eq,)
 
+
+
+@app.cell(hide_code=True)
+def _(COL, K, block_eq, math, mo):
+    _v = block_eq.value.get("values", {})
+    _p = float(min(0.5, max(0.02, _v.get("p", 0.1))))
+    _n = int(min(8, max(1, _v.get("n", 1))))
+    _H = -_p * math.log2(_p) - (1 - _p) * math.log2(1 - _p)
+    _per = []
+    for _m in range(1, 9):
+        _pr = [_p ** k * (1 - _p) ** (_m - k) for k in range(_m + 1) for _ in range(math.comb(_m, k))]
+        _ln = K.huffman(_pr)["lengths"]
+        _per.append(sum(a * b for a, b in zip(_pr, _ln)) / _m)
+    _W, _Hh, _L, _R, _T, _B = 560, 190, 44, 14, 12, 34
+    _hi = max(_per + [_H + 0.02]) * 1.05
+    _lo = _H * 0.9
+    _x = lambda m: _L + (m - 1) / 7 * (_W - _L - _R)
+    _y = lambda v: _Hh - _B - (v - _lo) / (_hi - _lo) * (_Hh - _B - _T)
+    _upper = " ".join(f"{_x(m):.1f},{_y(_H + 1 / m):.1f}" for m in range(1, 9) if _H + 1 / m <= _hi)
+    _pts = " ".join(f"{_x(m):.1f},{_y(_per[m - 1]):.1f}" for m in range(1, 9))
+    _dots = "".join(f'<circle cx="{_x(m):.1f}" cy="{_y(_per[m - 1]):.1f}" r="{6 if m == _n else 3.5}" fill="{"#B5472A" if m == _n else COL}"/>' for m in range(1, 9))
+    _xt = "".join(f'<text x="{_x(m):.1f}" y="{_Hh - 18}" text-anchor="middle" font-size="11" fill="#6B7785">{m}</text>' for m in range(1, 9))
+    mo.Html(f"""
+    <svg viewBox="0 0 {_W} {_Hh}" width="100%" style="max-width:640px;display:block;margin:4px auto" font-family="-apple-system,Helvetica,Arial,sans-serif">
+      <line x1="{_L}" x2="{_W - _R}" y1="{_y(_H):.1f}" y2="{_y(_H):.1f}" stroke="#009E73" stroke-width="2" stroke-dasharray="6 3"/>
+      <text x="{_L + 4}" y="{_y(_H) + 14:.1f}" font-size="11" fill="#009E73">H = {_H:.3f}</text>
+      <polyline points="{_upper}" fill="none" stroke="#9AA5B1" stroke-width="1.5" stroke-dasharray="3 3"/>
+      <polyline points="{_pts}" fill="none" stroke="{COL}" stroke-width="2"/>{_dots}{_xt}
+      <text x="{_L - 6}" y="{_T + 8}" text-anchor="end" font-size="11" fill="#6B7785">{_hi:.2f}</text>
+      <text x="{_L - 6}" y="{_Hh - _B}" text-anchor="end" font-size="11" fill="#6B7785">{_lo:.2f}</text>
+      <text x="{_W / 2}" y="{_Hh - 3}" text-anchor="middle" font-size="12" fill="#3E4C59">block size n   (line = L_n/n, grey dashed = H + 1/n, red dot = current n)</text>
+    </svg>""")
+    return
 
 
 @app.cell(hide_code=True)

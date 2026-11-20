@@ -264,7 +264,7 @@ function render({ model, el }) {
                 (w > 9 ? '<span>' + esc(seg.label || '') + '</span>' : '') + '</div>';
       }
       h += '<div class="brow"><div class="blab">' + rich(row.label) + '</div><div class="btrack">' + segs +
-           (inf ? '<div class="seg inf">∞</div>' : '') + '</div><div class="bval">' + (inf ? '∞' : total.toFixed(3)) + '</div></div>';
+           (inf ? '<div class="seg inf">∞</div>' : '') + '</div><div class="bval">' + (inf ? '∞' : (row.value ? esc(String(out[row.value])) : total.toFixed(3))) + '</div></div>';
     }
     barBox.innerHTML = h;
   }
@@ -508,6 +508,7 @@ if anywidget is not None:
                (tick/cross) or a TeX string. Infinity renders as \\infty.
         bars:  optional stacked bars drawn under the equation:
                [dict(label="H×(P,Q)", segs=[dict(term="Hp", color="#009E73", label="H(P)"), ...]), ...]
+               optional row key value="term": print that term's value at the bar end instead of the bar total.
         bar_max: fixed bar scale (default auto).
         label (per var, optional): e.g. dict(value=.2, min=0, max=1, label="α  (P 0→1)"). Shown as a
                caption tag under the equation line, aligned beneath its chip (var name if omitted),

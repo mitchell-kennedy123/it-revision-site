@@ -18,12 +18,21 @@ def _():
     def tab_vars(a1, a2, a3, b1, b2):
         spec = dict(min=0, step=0.01, fmt=2)
         return {
-            "a1": dict(value=a1, max=1, color=COL, **spec),
-            "a2": dict(value=a2, max="1-a1", color=C2, **spec),
-            "a3": dict(value=a3, max="1-a1-a2", color=C3, **spec),
-            "b1": dict(value=b1, max="1-a1-a2-a3", color=C4, **spec),
-            "b2": dict(value=b2, max="1-a1-a2-a3-b1", color="#7A4EAB", **spec),
+            "a1": dict(value=a1, max=1, color=COL, label="p(x₁,y₁)", **spec),
+            "a2": dict(value=a2, max="1-a1", color=C2, label="p(x₁,y₂)", **spec),
+            "a3": dict(value=a3, max="1-a1-a2", color=C3, label="p(x₁,y₃)", **spec),
+            "b1": dict(value=b1, max="1-a1-a2-a3", color=C4, label="p(x₂,y₁)", **spec),
+            "b2": dict(value=b2, max="1-a1-a2-a3-b1", color="#7A4EAB", label="p(x₂,y₂)", **spec),
         }
+
+    # presets for the 2x3 joint (b3 = remainder)
+    PRESETS = {
+        "Independent": dict(a1=.30, a2=.18, a3=.12, b1=.20, b2=.12),
+        "Y = f(X) (H(Y|X)=0)": dict(a1=.60, a2=0, a3=0, b1=0, b2=.40),
+        "X = f(Y) (H(X|Y)=0)": dict(a1=.30, a2=.30, a3=0, b1=0, b2=0),
+        "Noisy link": dict(a1=.40, a2=.05, a3=.05, b1=.05, b2=.05),
+        "Default": dict(a1=.30, a2=.10, a3=.10, b1=.05, b2=.15),
+    }
 
     TAB_TEX = (
         r"P(X,Y)=\begin{array}{c|ccc|c}"
@@ -50,31 +59,17 @@ def _():
         "hx": dict(expr="H(r1,r2)", fmt=3), "hy": dict(expr="H(c1,c2,c3)", fmt=3),
         "hxy": dict(expr="H(a1,a2,a3,b1,b2,b3)", fmt=3),
     }
-    return C2, C3, C4, COL, K, T, TAB_TERMS, TAB_TEX, mo, tab_vars
+    return C2, C3, C4, COL, K, PRESETS, T, TAB_TERMS, TAB_TEX, mo, tab_vars
 
 
 @app.cell
-def _(COL, K, mo):
-    def sheet(rows):
-        _pre = "$" + chr(92) + "displaystyle "
-        _cells = ""
-        for _n, _e, _p in rows:
-            _h = K._md_html(_pre + _e + "$")
-            _cells += (
-                '<div style="padding:6px 2px;border-bottom:1px solid #EEF1F4;min-width:0">'
-                '<div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#52606D;font-weight:600">'
-                f'<span>{_n}</span><span style="color:{K.BOOK_COL}">p.{_p}</span></div>'
-                f'<div style="overflow-x:auto;font-size:15px">{_h}</div></div>')
-        return mo.Html(
-            f'<div style="border:1px solid #E3E7EC;border-top:4px solid {COL};border-radius:10px;padding:6px 16px 8px;background:#fff">'
-            f'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));column-gap:26px">{_cells}</div></div>')
-
+def _(K, mo):
     def traps(items):
         _li = "".join(f'<li style="margin:3px 0">{K._md_html(_t)}</li>' for _t in items)
         return mo.Html(
             f'<div style="border:1px solid #E3E7EC;border-left:5px solid {K.TRAP_COL};border-radius:10px;padding:8px 16px;background:#FBF0EC;'
             f'font-size:14.5px;line-height:1.5"><ul style="margin:0;padding-left:18px">{_li}</ul></div>')
-    return sheet, traps
+    return (traps,)
 
 
 @app.cell
@@ -87,25 +82,30 @@ def _(K, T, mo):
 
 
 @app.cell
-def _(K, T, mo, sheet):
-    mo.vstack([K.section(T, "Formula sheet"), sheet([
-        ('Self-information', 'I(x)=-\\log_2p(x)\\ \\text{bits}', '184'),
-        ('Entropy', 'H(X)=-\\sum_xp(x)\\log_2p(x)=\\mathbb E[-\\log_2p(X)],\\ \\ 0\\log0=0', '180'),
-        ('Binary entropy', 'H_2(p)=-p\\log_2p-(1-p)\\log_2(1-p)', '181'),
-        ('Bounds', '0\\le H(X)\\le\\log_2|\\mathcal X|\\ \\ (0:\\text{deterministic};\\ \\log_2|\\mathcal X|:\\text{uniform})', '195'),
-        ('Grouping axiom', 'H(p_1,p_2,p_3)=H_2(p_1)+(1-p_1)\\,H\\!\\Bigl(\\tfrac{p_2}{1-p_1},\\tfrac{p_3}{1-p_1}\\Bigr)', '185–186'),
-        ('Joint, conditional', 'H(X,Y)=-\\sum p(x,y)\\log p(x,y);\\ \\ H(Y\\mid X)=\\sum_xp(x)H(Y\\mid X{=}x)', '186, 188'),
-        ('Chain rule', 'H(X,Y)=H(X)+H(Y\\mid X)=H(Y)+H(X\\mid Y);\\ \\ H(X_{1..n})=\\sum_iH(X_i\\mid X_{i-1..1})', '195'),
-        ('Conditioning reduces', 'H(X\\mid Y)\\le H(X);\\ \\ H(X_1,\\dots,X_n)\\le\\sum_iH(X_i)', '195'),
-        ('Mutual information', 'I(X;Y)=\\sum p(x,y)\\log\\frac{p(x,y)}{p(x)p(y)}=H(X)-H(X\\mid Y)=H(X)+H(Y)-H(X,Y)', '190, 194'),
-        ('MI as KL', 'I(X;Y)=D_{\\mathrm{KL}}(P_{XY}\\,\\|\\,P_XP_Y)\\ge0;\\ \\ I(X;X)=H(X)', '194'),
-        ('Conditional MI', 'I(X;Y\\mid Z)=H(X\\mid Z)-H(X\\mid Y,Z);\\ \\ I(X_1,X_2;Y)=I(X_1;Y)+I(X_2;Y\\mid X_1)', '191'),
-        ('Data processing', 'X\\to Y\\to Z\\Rightarrow I(X;Z)\\le I(X;Y),\\ \\ I(X;Z)\\le I(Y;Z)', '227'),
-        ('Functions', 'H(g(X))\\le H(X),\\ \\ I(X;g(X))=H(g(X))', '227'),
-        ('BSC, input skew', 'I(X;Y)=H_2(p{*}f)-H_2(f),\\ \\ p{*}f=p(1-f)+(1-p)f', '330–332'),
-        ('Han', 'H(X_1,\\dots,X_n)\\le\\frac1{n-1}\\sum_{i}H(X_{(i)}),\\ \\ X_{(i)}=\\text{all but }X_i', '196'),
-        ('Plug-in, Miller–Madow', '\\hat H=-\\sum\\hat p_i\\log\\hat p_i,\\ \\ \\hat H_{MM}=\\hat H+\\frac{m_{>0}-1}{2n\\ln2}\\ \\text{bits}', '199–200'),
-    ])], gap=0.3)
+def _(K, T, mo):
+    mo.vstack([K.section(T, "Formula sheet"), mo.md(r"""
+| Result | Formula | Book p. |
+|---|---|---|
+| Self-information | $I(x)=-\log_2p(x)$ bits | 184 |
+| Entropy | $H(X)=-\sum_xp(x)\log_2p(x)=\mathbb E[-\log_2p(X)]$, $0\log0=0$ | 180 |
+| Binary entropy | $H_2(p)=-p\log_2p-(1-p)\log_2(1-p)$ | 181 |
+| Bounds | $0\le H(X)\le\log_2\lvert\mathcal X\rvert$ (0: deterministic ; $\log_2\lvert\mathcal X\rvert$: uniform) | 195 |
+| Grouping axiom | $H(p_1,p_2,p_3)=H_2(p_1)+(1-p_1)H(\frac{p_2}{1-p_1},\frac{p_3}{1-p_1})$ | 185 to 186 |
+| Joint | $H(X,Y)=-\sum p(x,y)\log p(x,y)$ | 186 |
+| Conditional | $H(Y\mid X)=\sum_xp(x)H(Y\mid X{=}x)$ | 188 |
+| Chain rule | $H(X,Y)=H(X)+H(Y\mid X)=H(Y)+H(X\mid Y)$ ; $H(X_{1..n})=\sum_iH(X_i\mid X_{i-1..1})$ | 195 |
+| Conditioning reduces | $H(X\mid Y)\le H(X)$ ; $H(X_1,\dots,X_n)\le\sum_iH(X_i)$ | 195 |
+| Mutual information | $I(X;Y)=\sum p(x,y)\log\frac{p(x,y)}{p(x)p(y)}$ | 190 |
+| MI, entropy forms | $I(X;Y)=H(X)-H(X\mid Y)=H(X)+H(Y)-H(X,Y)$ | 194 |
+| MI as KL | $I(X;Y)=D_{\mathrm{KL}}(P_{XY}\Vert P_XP_Y)\ge0$ ; $I(X;X)=H(X)$ | 194 |
+| Conditional MI | $I(X;Y\mid Z)=H(X\mid Z)-H(X\mid Y,Z)$ ; $I(X_1,X_2;Y)=I(X_1;Y)+I(X_2;Y\mid X_1)$ | 191 |
+| Data processing | $X\to Y\to Z\Rightarrow I(X;Z)\le I(X;Y)$ and $I(X;Z)\le I(Y;Z)$ | 227 |
+| Functions | $H(g(X))\le H(X)$ ; $I(X;g(X))=H(g(X))$ | 227 |
+| BSC, input skew | $I(X;Y)=H_2(p{*}f)-H_2(f)$, $p{*}f=p(1-f)+(1-p)f$ | 330 to 332 |
+| Han | $H(X_1,\dots,X_n)\le\frac1{n-1}\sum_iH(X_{(i)})$, $X_{(i)}$ = all but $X_i$ | 196 |
+| Plug-in estimate | $\hat H=-\sum\hat p_i\log\hat p_i$ | 199 |
+| Miller-Madow | $\hat H_{MM}=\hat H+\frac{m_{>0}-1}{2n\ln2}$ bits | 199 to 200 |
+""")], gap=0.3)
     return
 
 
@@ -116,7 +116,7 @@ def _(K, T, mo):
 
 
 @app.cell
-def _(C2, COL, K, TAB_TERMS, TAB_TEX, mo, tab_vars):
+def _(C2, COL, K, PRESETS, TAB_TERMS, TAB_TEX, mo, tab_vars):
     eq_tab = mo.ui.anywidget(K.LiveEq(
         [TAB_TEX,
          r"H(Y\mid X{=}x_1)=\out{hr1}\qquad H(Y\mid X{=}x_2)=\out{hr2}",
@@ -127,13 +127,13 @@ def _(C2, COL, K, TAB_TERMS, TAB_TEX, mo, tab_vars):
          "s1": dict(expr="hx+hyx", fmt=3),
          "agree": dict(expr="abs(s1-hxy)<1e-9")},
         bars=[dict(label="$H(X,Y)$", segs=[dict(term="hx", color=COL, label="H(X)"), dict(term="hyx", color=C2, label="H(Y|X)")])],
-        bar_max=2.6))
+        bar_max=2.6, presets=PRESETS))
     mo.vstack([eq_tab, K.notice("$H(Y\\mid X)$ is the $p(x)$-weighted average of the row entropies, and it is $0$ exactly when every row has a single nonzero cell ($Y$ is a function of $X$). The chain rule $H(X)+H(Y\\mid X)$ always matches the cell sum.")], gap=0.4)
     return (eq_tab,)
 
 
 @app.cell
-def _(C2, C3, COL, K, TAB_TERMS, TAB_TEX, mo, tab_vars):
+def _(C2, C3, COL, K, PRESETS, TAB_TERMS, TAB_TEX, mo, tab_vars):
     _t = {**TAB_TERMS}
     for _i, _c in enumerate(["a1", "a2", "a3", "b1", "b2", "b3"]):
         _r, _col = ("r1", f"c{_i+1}") if _i < 3 else ("r2", f"c{_i-2}")
@@ -154,7 +154,7 @@ def _(C2, C3, COL, K, TAB_TERMS, TAB_TEX, mo, tab_vars):
          r"2{\times}2\text{ minors: }\ p_{11}p_{22}-p_{12}p_{21}=\out{m12}",
          r"p_{11}p_{23}-p_{13}p_{21}=\out{m13}\qquad p_{12}p_{23}-p_{13}p_{22}=\out{m23}",
          r"\text{independent (all minors }0\text{)?}\ \out{indep}"],
-        tab_vars(0.25, 0.10, 0.05, 0.05, 0.10), _t, live=True))
+        tab_vars(0.25, 0.10, 0.05, 0.05, 0.10), _t, live=True, presets=PRESETS))
     mo.vstack([eq_mi, K.notice("Independence means every row is proportional to the same $p(y)$; then every log term is $\\log_2 1=0$ and the overlap disappears.")], gap=0.4)
     return (eq_mi,)
 
